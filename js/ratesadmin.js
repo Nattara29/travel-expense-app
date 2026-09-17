@@ -11,6 +11,31 @@ const RATE_TYPE_LABEL = {
 
 const TRANSPORT_TYPE_LABEL_RA = { personal_car: "รถยนต์ส่วนบุคคล", personal_motorcycle: "รถจักรยานยนต์ส่วนบุคคล" };
 
+// ป้ายกำกับกลุ่มตำแหน่งแบบระบบซีเดิม (ระดับ 1-11) ที่ระเบียบเดินทางไปราชการบางฉบับยังอ้างอิงอยู่
+// ใช้ช่วยให้แอดมินที่คุ้นกับคำนี้หากลุ่มเจอง่ายขึ้นเท่านั้น ไม่กระทบวิธีคำนวณหรือโครงสร้างข้อมูลใดๆ
+const OLD_LEVEL_TAGS = [
+  {
+    label: "ระดับ 8 ลงมาหรือเทียบเท่า",
+    positionNames: [
+      "ประเภททั่วไป ระดับปฏิบัติงาน",
+      "ประเภททั่วไป ระดับชำนาญงาน",
+      "ประเภททั่วไป ระดับอาวุโส",
+      "ประเภทวิชาการ ระดับปฏิบัติการ",
+      "ประเภทวิชาการ ระดับชำนาญการ",
+      "ประเภทวิชาการ ระดับชำนาญการพิเศษ",
+      "ประเภทอำนวยการ ระดับต้น",
+      "ประเภทบริหาร ระดับต้น",
+    ],
+  },
+];
+
+// คืนป้ายกำกับก็ต่อเมื่อกลุ่มตำแหน่งตรงกับกลุ่มที่รู้จักพอดี (ไม่เดาป้ายกำกับให้กลุ่มที่ไม่ตรงเป๊ะ)
+function oldLevelTagFor(positionNames) {
+  const nameSet = new Set(positionNames);
+  const tag = OLD_LEVEL_TAGS.find((t) => t.positionNames.length === nameSet.size && t.positionNames.every((n) => nameSet.has(n)));
+  return tag ? tag.label : null;
+}
+
 const RatesAdmin = {
   async load() {
     await RateEngine.reload();
@@ -58,9 +83,13 @@ const RatesAdmin = {
     const groupRows = groups
       .map((g) => {
         const posIds = g.positions.map((x) => x.position.id);
+        const tag = oldLevelTagFor(g.positions.map((x) => x.position.name));
         return `<tr>
           <td>${RateEngine.fmt(g.value)} บาท</td>
-          <td class="wrap-cell">${g.positions.map((x) => escapeHtml(x.position.name)).join(", ")}</td>
+          <td class="wrap-cell">
+            ${tag ? `<div class="rate-old-level-tag">${escapeHtml(tag)}</div>` : ""}
+            ${g.positions.map((x) => escapeHtml(x.position.name)).join(", ")}
+          </td>
           <td>${dateRangeLabel(g.positions)}</td>
           <td style="white-space:nowrap;">
             <button class="btn btn-ghost btn-sm" onclick='RatesAdmin.editRateGroup("${rateType}", ${JSON.stringify(posIds)})'>แก้ไข</button>
