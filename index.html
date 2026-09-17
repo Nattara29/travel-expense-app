@@ -56,7 +56,7 @@
           <div class="dash-date">เลือกประเภทการเดินทางที่ต้องการคำนวณค่าใช้จ่าย</div>
         </div>
         <div class="grid grid-2">
-          <div class="card home-choice" onclick="UI.showView('gov-trip')" style="cursor:pointer;">
+          <div class="card home-choice" onclick="UI.showView('gov-allowance-individual')" style="cursor:pointer;">
             <h3 class="section-title">คำนวณค่าใช้จ่ายเดินทางไปราชการ</h3>
             <p class="section-sub" style="margin:0;">เบี้ยเลี้ยง ค่าที่พัก ค่าพาหนะ — รายบุคคลหรือหมู่คณะ</p>
           </div>
@@ -67,9 +67,112 @@
         </div>
       </div>
 
-      <!-- คำนวณค่าใช้จ่ายเดินทางไปราชการ -->
-      <div class="view" id="view-gov-trip">
-        <div class="card"><p class="section-sub" style="margin:0;">🚧 อยู่ระหว่างพัฒนา — เร็วๆ นี้</p></div>
+      <!-- คำนวณค่าใช้จ่ายเดินทางไปราชการ: ค่าเบี้ยเลี้ยง (รายบุคคล) -->
+      <div class="view" id="view-gov-allowance-individual">
+        <div class="card" style="max-width:640px;">
+          <h3 class="section-title">คำนวณค่าเบี้ยเลี้ยง (รายบุคคล)</h3>
+          <p class="section-sub">เดินทางไปราชการ</p>
+          <div class="field"><label>ระดับตำแหน่ง</label><select id="gaiPosition"></select></div>
+          <div class="grid grid-2" style="gap:14px;">
+            <div class="field"><label>วันเวลาออกเดินทาง</label><input id="gaiDeparture" type="datetime-local"/></div>
+            <div class="field"><label>วันเวลาเดินทางกลับ</label><input id="gaiReturn" type="datetime-local"/></div>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
+              <input checked id="gaiOvernight" style="width:auto;" type="checkbox"/> มีการพักแรม
+            </label>
+          </div>
+          <button class="btn btn-primary" onclick="GovTrip.calcAllowanceIndividual()">คำนวณ</button>
+          <div id="gaiResult"></div>
+        </div>
+      </div>
+
+      <!-- คำนวณค่าใช้จ่ายเดินทางไปราชการ: ค่าเบี้ยเลี้ยง (หมู่คณะ) -->
+      <div class="view" id="view-gov-allowance-group">
+        <div class="card">
+          <h3 class="section-title">คำนวณค่าเบี้ยเลี้ยง (หมู่คณะ)</h3>
+          <p class="section-sub">เดินทางไปราชการ — ผู้เดินทางทุกคนใช้กำหนดการเดียวกัน</p>
+          <div class="grid grid-2" style="gap:14px;">
+            <div class="field"><label>วันเวลาออกเดินทาง</label><input id="gagDeparture" type="datetime-local"/></div>
+            <div class="field"><label>วันเวลาเดินทางกลับ</label><input id="gagReturn" type="datetime-local"/></div>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
+              <input checked id="gagOvernight" style="width:auto;" type="checkbox"/> มีการพักแรม
+            </label>
+          </div>
+          <label>รายชื่อผู้เดินทาง</label>
+          <div id="gagRows"></div>
+          <button class="btn btn-ghost btn-sm" onclick="GovTrip.addAllowanceGroupRow()" style="margin-top:8px;margin-bottom:16px;">+ เพิ่มรายชื่อ</button>
+          <div><button class="btn btn-primary" onclick="GovTrip.calcAllowanceGroup()">คำนวณ</button></div>
+          <div id="gagResult"></div>
+        </div>
+      </div>
+
+      <!-- คำนวณค่าใช้จ่ายเดินทางไปราชการ: ค่าที่พัก (รายบุคคล) -->
+      <div class="view" id="view-gov-lodging-individual">
+        <div class="card" style="max-width:640px;">
+          <h3 class="section-title">คำนวณค่าที่พัก (รายบุคคล)</h3>
+          <p class="section-sub">เดินทางไปราชการ</p>
+          <div class="field"><label>ระดับตำแหน่ง</label><select id="gliPosition"></select></div>
+          <div class="field"><label>จำนวนคืน</label><input id="gliNights" min="0" type="number" value="1"/></div>
+          <div class="field"><label>วิธีเบิก</label>
+            <select id="gliMode" onchange="GovTrip.onLodgingModeChange('gli')">
+              <option value="actual">จ่ายจริง (มีเพดานสูงสุด)</option>
+              <option value="lump_sum">เหมาจ่าย</option>
+            </select>
+          </div>
+          <div id="gliActualFields">
+            <div class="field"><label>ประเภทห้องพัก</label>
+              <select id="gliRoomType">
+                <option value="single">ห้องเดี่ยว</option>
+                <option value="double">ห้องคู่ (พักรวมกัน 2 คนขึ้นไป)</option>
+              </select>
+            </div>
+            <div class="field"><label>จำนวนเงินที่จ่ายจริง (ต่อคืน)</label><input id="gliActualAmount" min="0" step="0.01" type="number"/></div>
+          </div>
+          <button class="btn btn-primary" onclick="GovTrip.calcLodgingIndividual()">คำนวณ</button>
+          <div id="gliResult"></div>
+        </div>
+      </div>
+
+      <!-- คำนวณค่าใช้จ่ายเดินทางไปราชการ: ค่าที่พัก (หมู่คณะ) -->
+      <div class="view" id="view-gov-lodging-group">
+        <div class="card">
+          <h3 class="section-title">คำนวณค่าที่พัก (หมู่คณะ)</h3>
+          <p class="section-sub">เดินทางไปราชการ — ทั้งคณะต้องเลือกวิธีเบิกแบบเดียวกัน (ตามระเบียบ)</p>
+          <div class="grid grid-2" style="gap:14px;">
+            <div class="field"><label>จำนวนคืน</label><input id="glgNights" min="0" type="number" value="1"/></div>
+            <div class="field"><label>วิธีเบิก</label>
+              <select id="glgMode" onchange="GovTrip.onLodgingModeChange('glg')">
+                <option value="actual">จ่ายจริง (มีเพดานสูงสุด — ปกติพักรวมห้องคู่)</option>
+                <option value="lump_sum">เหมาจ่าย</option>
+              </select>
+            </div>
+          </div>
+          <label>รายชื่อผู้เดินทาง</label>
+          <div id="glgRows"></div>
+          <button class="btn btn-ghost btn-sm" onclick="GovTrip.addLodgingGroupRow()" style="margin-top:8px;margin-bottom:16px;">+ เพิ่มรายชื่อ</button>
+          <div><button class="btn btn-primary" onclick="GovTrip.calcLodgingGroup()">คำนวณ</button></div>
+          <div id="glgResult"></div>
+        </div>
+      </div>
+
+      <!-- คำนวณค่าใช้จ่ายเดินทางไปราชการ: ค่าพาหนะ -->
+      <div class="view" id="view-gov-transport">
+        <div class="card" style="max-width:640px;">
+          <h3 class="section-title">คำนวณค่าพาหนะส่วนตัว</h3>
+          <p class="section-sub">เดินทางไปราชการ — เงินชดเชยการใช้พาหนะส่วนตัว</p>
+          <div class="field"><label>ประเภทพาหนะ</label>
+            <select id="gtVehicle">
+              <option value="personal_car">รถยนต์ส่วนบุคคล</option>
+              <option value="personal_motorcycle">รถจักรยานยนต์ส่วนบุคคล</option>
+            </select>
+          </div>
+          <div class="field"><label>ระยะทาง (กิโลเมตร)</label><input id="gtDistance" min="0" step="0.1" type="number"/></div>
+          <button class="btn btn-primary" onclick="GovTrip.calcTransport()">คำนวณ</button>
+          <div id="gtResult"></div>
+        </div>
       </div>
 
       <!-- คำนวณค่าใช้จ่ายเดินทางไปฝึกอบรม -->
@@ -99,5 +202,6 @@
 
 <script src="js/supabaseClient.js"></script>
 <script src="js/app.js"></script>
+<script src="js/govtrip.js"></script>
 </body>
 </html>

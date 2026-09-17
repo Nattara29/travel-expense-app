@@ -9,9 +9,20 @@ const AppState = {
 };
 
 // MENU: รายการที่ไม่ใส่ adminOnly = ผู้ใช้งานทั่วไปเห็นได้เลยโดยไม่ต้องล็อกอิน
+// รายการที่มี children = หัวข้อหมวดหมู่ กดแล้วจะกาง/หุบเมนูย่อย (ไม่ใช่หน้าของตัวเอง)
 const MENU = [
   { id: "dashboard", label: "แดชบอร์ด", adminOnly: true },
-  { id: "gov-trip", label: "คำนวณค่าใช้จ่ายเดินทางไปราชการ" },
+  {
+    id: "gov-trip",
+    label: "คำนวณค่าใช้จ่ายเดินทางไปราชการ",
+    children: [
+      { id: "gov-allowance-individual", label: "ค่าเบี้ยเลี้ยง (คนเดียว)" },
+      { id: "gov-allowance-group", label: "ค่าเบี้ยเลี้ยง (หมู่คณะ)" },
+      { id: "gov-lodging-individual", label: "ค่าที่พัก (คนเดียว)" },
+      { id: "gov-lodging-group", label: "ค่าที่พัก (หมู่คณะ)" },
+      { id: "gov-transport", label: "ค่าพาหนะ" },
+    ],
+  },
   { id: "training-trip", label: "คำนวณค่าใช้จ่ายเดินทางไปฝึกอบรม" },
   { id: "rates", label: "จัดการอัตราค่าใช้จ่าย", adminOnly: true },
 ];
@@ -29,10 +40,33 @@ const UI = {
     document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
     document.getElementById("view-" + id).classList.add("active");
     document.querySelectorAll(".menu-item").forEach((m) => m.classList.toggle("active", m.dataset.id === id));
-    const item = MENU.find((m) => m.id === id);
+    const item = UI.findMenuItem(id);
     document.getElementById("pageTitle").textContent = item ? item.label : "หน้าแรก";
     UI.closeSidebar();
     if (id === "dashboard") Dashboard.load();
+    if (id.startsWith("gov-")) GovTrip.onShowView(id);
+  },
+  // หาเมนู (รวมเมนูย่อยที่ซ้อนอยู่ใน children) จาก id — ใช้ตั้งชื่อหัวข้อบนสุดของหน้า
+  findMenuItem(id) {
+    for (const m of MENU) {
+      if (m.id === id) return m;
+      if (m.children) {
+        const c = m.children.find((c) => c.id === id);
+        if (c) return c;
+      }
+    }
+    return null;
+  },
+  expandedMenus: new Set(),
+  toggleSubmenu(menuId) {
+    if (UI.expandedMenus.has(menuId)) UI.expandedMenus.delete(menuId);
+    else UI.expandedMenus.add(menuId);
+    UI.renderMenu();
+    const activeView = document.querySelector(".view.active");
+    if (activeView) {
+      const activeId = activeView.id.replace("view-", "");
+      document.querySelectorAll(".menu-item").forEach((m) => m.classList.toggle("active", m.dataset.id === activeId));
+    }
   },
   toast(msg, isError) {
     Swal.fire({
@@ -69,8 +103,22 @@ const UI = {
     const isAdmin = AppState.profile && AppState.profile.role === "admin";
     const el = document.getElementById("menuList");
     el.innerHTML = MENU.filter((m) => !m.adminOnly || isAdmin)
-      .map((m) => `<div class="menu-item" data-id="${m.id}" onclick="UI.showView('${m.id}')"><span class="menu-label">${m.label}</span></div>`)
+      .map((m) => UI.renderMenuItem(m))
       .join("");
+  },
+  // เมนูที่มี children = หัวข้อหมวดหมู่ (กางเป็นเมนูย่อยอีกชั้น ไม่ใช่หน้าของตัวเอง)
+  renderMenuItem(m) {
+    if (!m.children) {
+      return `<div class="menu-item" data-id="${m.id}" onclick="UI.showView('${m.id}')"><span class="menu-label">${m.label}</span></div>`;
+    }
+    const isOpen = UI.expandedMenus.has(m.id);
+    return `
+      <div class="menu-item has-children ${isOpen ? "expanded" : ""}" onclick="UI.toggleSubmenu('${m.id}')">
+        <span class="menu-label">${m.label}</span><span class="menu-caret">›</span>
+      </div>
+      <div class="submenu ${isOpen ? "open" : ""}">
+        ${m.children.map((c) => `<div class="menu-item sub" data-id="${c.id}" onclick="event.stopPropagation();UI.showView('${c.id}')"><span class="menu-label">${c.label}</span></div>`).join("")}
+      </div>`;
   },
   // อัปเดตปุ่ม/ป้ายมุมขวาบนและเมนู ให้ตรงกับสถานะล็อกอินปัจจุบัน
   updateAuthUI() {
