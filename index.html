@@ -12,23 +12,9 @@
 </head>
 <body>
 
-<!-- ============ หน้าล็อกอิน (สำหรับแอดมิน/เจ้าหน้าที่ที่มีบัญชีอยู่แล้วเท่านั้น ไม่มีระบบสมัครสมาชิกเอง) ============ -->
-<div id="authScreen">
-  <div class="auth-card">
-    <div class="auth-seal">ทม.</div>
-    <h1 class="auth-title">ระบบคำนวณค่าใช้จ่ายเดินทาง</h1>
-    <p class="auth-sub">เทศบาลเมืองศรีสัชนาลัย</p>
-    <div class="auth-error" id="authError"></div>
-
-    <div class="field"><label>อีเมล</label><input id="loginEmail" type="email" placeholder="name@example.com"/></div>
-    <div class="field"><label>รหัสผ่าน</label><input id="loginPassword" type="password" placeholder="••••••••"/></div>
-    <button class="btn btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center;" onclick="Auth.login()">เข้าสู่ระบบ</button>
-    <p class="helptext" style="text-align:center;margin-top:14px;">ระบบนี้ไม่เปิดให้สมัครสมาชิกเอง — ติดต่อผู้ดูแลระบบเพื่อขอบัญชีผู้ใช้งาน</p>
-  </div>
-</div>
-
-<!-- ============ แอปหลัก ============ -->
-<div id="app" style="display:none;">
+<!-- ============ แอปหลัก — เปิดใช้งานได้ทันทีโดยไม่ต้องล็อกอิน (เครื่องคำนวณใช้ได้เลย) ============ -->
+<!-- ผู้ดูแลระบบกดปุ่ม "เข้าสู่ระบบผู้ดูแลระบบ" มุมขวาบนเพื่อล็อกอิน จะเห็นเมนูจัดการเพิ่มเติม -->
+<div id="app">
   <aside id="sidebar">
     <div class="brand">
       <div class="brand-seal" id="brandSeal">ทม.</div>
@@ -39,7 +25,7 @@
       <button aria-label="ปิดเมนู" class="sidebar-close" onclick="UI.closeSidebar()">✕</button>
     </div>
     <nav class="menu" id="menuList"></nav>
-    <div class="sidebar-foot" id="whoAmI">—</div>
+    <div class="sidebar-foot" id="whoAmI">ผู้ใช้งานทั่วไป</div>
   </aside>
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="UI.closeSidebar()"></div>
 
@@ -51,24 +37,33 @@
         </button>
         <div style="min-width:0;">
           <div class="crumb-eyebrow">ระบบการเงิน / ค่าใช้จ่ายเดินทาง</div>
-          <div class="page-title" id="pageTitle">แดชบอร์ด</div>
+          <div class="page-title" id="pageTitle">หน้าแรก</div>
         </div>
       </div>
       <div class="topbar-right">
         <span class="org-pill" id="orgPill">เทศบาลเมืองศรีสัชนาลัย</span>
-        <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">ออกจากระบบ</button>
+        <span id="adminBadge" style="display:none;font-weight:600;"></span>
+        <button class="btn btn-ghost btn-sm" id="adminLoginBtn" onclick="Auth.openLogin()">เข้าสู่ระบบผู้ดูแลระบบ</button>
+        <button class="btn btn-ghost btn-sm" id="adminLogoutBtn" onclick="Auth.logout()" style="display:none;">ออกจากระบบ</button>
       </div>
     </div>
     <div id="content">
 
-      <!-- แดชบอร์ด -->
-      <div class="view active" id="view-dashboard">
-        <div class="dash-greeting" id="dashGreeting"></div>
-        <div class="grid grid-4" id="dashStats" style="margin-bottom:20px;"></div>
-        <div class="card">
-          <h3 class="section-title">ทริปล่าสุด</h3>
-          <p class="section-sub">รายการคำนวณค่าใช้จ่ายเดินทางที่บันทึกไว้</p>
-          <div class="table-scroll"><table id="dashTripsTable"><thead><tr><th>เรื่อง</th><th>ประเภท</th><th>วันที่เดินทาง</th><th>จำนวนคน</th><th>สถานะ</th></tr></thead><tbody></tbody></table></div>
+      <!-- หน้าแรก: ให้เลือกว่าจะคำนวณประเภทไหน -->
+      <div class="view active" id="view-home">
+        <div class="dash-greeting" id="homeGreeting">
+          <div class="dash-hello">ยินดีต้อนรับ</div>
+          <div class="dash-date">เลือกประเภทการเดินทางที่ต้องการคำนวณค่าใช้จ่าย</div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card home-choice" onclick="UI.showView('gov-trip')" style="cursor:pointer;">
+            <h3 class="section-title">คำนวณค่าใช้จ่ายเดินทางไปราชการ</h3>
+            <p class="section-sub" style="margin:0;">เบี้ยเลี้ยง ค่าที่พัก ค่าพาหนะ — รายบุคคลหรือหมู่คณะ</p>
+          </div>
+          <div class="card home-choice" onclick="UI.showView('training-trip')" style="cursor:pointer;">
+            <h3 class="section-title">คำนวณค่าใช้จ่ายเดินทางไปฝึกอบรม</h3>
+            <p class="section-sub" style="margin:0;">เบี้ยเลี้ยง ค่าที่พัก ค่าพาหนะ — รายบุคคลหรือหมู่คณะ</p>
+          </div>
         </div>
       </div>
 
@@ -80,6 +75,17 @@
       <!-- คำนวณค่าใช้จ่ายเดินทางไปฝึกอบรม -->
       <div class="view" id="view-training-trip">
         <div class="card"><p class="section-sub" style="margin:0;">🚧 อยู่ระหว่างพัฒนา — เร็วๆ นี้</p></div>
+      </div>
+
+      <!-- แดชบอร์ด (admin) -->
+      <div class="view" id="view-dashboard">
+        <div class="dash-greeting" id="dashGreeting"></div>
+        <div class="grid grid-4" id="dashStats" style="margin-bottom:20px;"></div>
+        <div class="card">
+          <h3 class="section-title">ทริปล่าสุด</h3>
+          <p class="section-sub">รายการคำนวณค่าใช้จ่ายเดินทางที่บันทึกไว้</p>
+          <div class="table-scroll"><table id="dashTripsTable"><thead><tr><th>เรื่อง</th><th>ประเภท</th><th>วันที่เดินทาง</th><th>จำนวนคน</th><th>สถานะ</th></tr></thead><tbody></tbody></table></div>
+        </div>
       </div>
 
       <!-- จัดการอัตราค่าใช้จ่าย (admin) -->

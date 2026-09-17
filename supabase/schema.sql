@@ -149,14 +149,16 @@ as $$
   select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
 $$;
 
-create policy "position_levels_select_all" on public.position_levels for select using (auth.role() = 'authenticated');
+-- ตารางระดับตำแหน่ง/อัตราค่าใช้จ่าย เปิดอ่านได้แบบสาธารณะ (ไม่ต้องล็อกอิน) เพราะเป็นข้อมูลอ้างอิง
+-- ไม่ใช่ข้อมูลส่วนบุคคล และเครื่องคำนวณต้องใช้งานได้ทันทีโดยผู้ใช้งานทั่วไปไม่ต้องมีบัญชี
+create policy "position_levels_select_all" on public.position_levels for select using (true);
 create policy "position_levels_admin_write" on public.position_levels for all using (is_admin()) with check (is_admin());
 
 create policy "profiles_select_own_or_admin" on public.profiles for select using (id = auth.uid() or is_admin());
 create policy "profiles_update_own" on public.profiles for update using (id = auth.uid() or is_admin());
 create policy "profiles_admin_insert" on public.profiles for insert with check (is_admin());
 
-create policy "rate_settings_select_all" on public.rate_settings for select using (auth.role() = 'authenticated');
+create policy "rate_settings_select_all" on public.rate_settings for select using (true);
 create policy "rate_settings_admin_insert" on public.rate_settings for insert with check (is_admin());
 create policy "rate_settings_admin_delete" on public.rate_settings for delete using (is_admin());
 -- หมายเหตุ: ตั้งใจไม่มี policy สำหรับ UPDATE — การ "แก้อัตรา" ทำโดยเพิ่มแถวใหม่ (insert) พร้อม effective_date ใหม่เสมอ ไม่แก้ของเดิม

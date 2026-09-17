@@ -1,4 +1,4 @@
-// โครงหลักของแอป: ล็อกอิน, เมนู, แดชบอร์ด
+// โครงหลักของแอป: เมนู, แดชบอร์ด, ล็อกอินผู้ดูแลระบบ (ผู้ใช้งานทั่วไปใช้เครื่องคำนวณได้เลยไม่ต้องล็อกอิน)
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -8,10 +8,11 @@ const AppState = {
   profile: null,
 };
 
+// MENU: รายการที่ไม่ใส่ adminOnly = ผู้ใช้งานทั่วไปเห็นได้เลยโดยไม่ต้องล็อกอิน
 const MENU = [
-  { id: "dashboard", label: "แดชบอร์ด" },
   { id: "gov-trip", label: "คำนวณค่าใช้จ่ายเดินทางไปราชการ" },
   { id: "training-trip", label: "คำนวณค่าใช้จ่ายเดินทางไปฝึกอบรม" },
+  { id: "dashboard", label: "แดชบอร์ด", adminOnly: true },
   { id: "rates", label: "จัดการอัตราค่าใช้จ่าย", adminOnly: true },
 ];
 
@@ -29,7 +30,7 @@ const UI = {
     document.getElementById("view-" + id).classList.add("active");
     document.querySelectorAll(".menu-item").forEach((m) => m.classList.toggle("active", m.dataset.id === id));
     const item = MENU.find((m) => m.id === id);
-    document.getElementById("pageTitle").textContent = item ? item.label : "";
+    document.getElementById("pageTitle").textContent = item ? item.label : "หน้าแรก";
     UI.closeSidebar();
     if (id === "dashboard") Dashboard.load();
   },
@@ -63,6 +64,7 @@ const UI = {
     });
     return result.isConfirmed;
   },
+  // แสดงเฉพาะเมนูที่ไม่ใช่ adminOnly เสมอ ส่วนเมนูผู้ดูแลระบบโผล่มาก็ต่อเมื่อล็อกอินเป็น admin แล้วเท่านั้น
   renderMenu() {
     const isAdmin = AppState.profile && AppState.profile.role === "admin";
     const el = document.getElementById("menuList");
@@ -70,35 +72,83 @@ const UI = {
       .map((m) => `<div class="menu-item" data-id="${m.id}" onclick="UI.showView('${m.id}')"><span class="menu-label">${m.label}</span></div>`)
       .join("");
   },
+  // อัปเดตปุ่ม/ป้ายมุมขวาบนและเมนู ให้ตรงกับสถานะล็อกอินปัจจุบัน
+  updateAuthUI() {
+    const isLoggedIn = !!AppState.profile;
+    document.getElementById("adminLoginBtn").style.display = isLoggedIn ? "none" : "";
+    document.getElementById("adminLogoutBtn").style.display = isLoggedIn ? "" : "none";
+    const badge = document.getElementById("adminBadge");
+    if (isLoggedIn) {
+      badge.style.display = "";
+      badge.textContent = `${AppState.profile.full_name} (${AppState.profile.role === "admin" ? "ผู้ดูแลระบบ" : "เจ้าหน้าที่"})`;
+    } else {
+      badge.style.display = "none";
+    }
+    document.getElementById("whoAmI").textContent = isLoggedIn
+      ? `${AppState.profile.full_name} (${AppState.profile.role === "admin" ? "ผู้ดูแลระบบ" : "เจ้าหน้าที่"})`
+      : "ผู้ใช้งานทั่วไป";
+    UI.renderMenu();
+    // ถ้ากำลังอยู่หน้าที่ต้องเป็นแอดมิน แล้วออกจากระบบไป ให้พากลับหน้าแรก
+    const activeView = document.querySelector(".view.active");
+    const activeId = activeView ? activeView.id.replace("view-", "") : null;
+    const activeMenuItem = MENU.find((m) => m.id === activeId);
+    if (activeMenuItem && activeMenuItem.adminOnly && !isLoggedIn) UI.showView("home");
+  },
 };
 
 const Auth = {
-  showError(msg) {
-    const el = document.getElementById("authError");
-    el.textContent = msg;
-    el.classList.add("show");
+  // ระบบนี้ไม่มีหน้าสมัครสมาชิก/ล็อกอินแยก ใช้กล่องโต้ตอบ (modal) แทน เพราะผู้ใช้งานทั่วไปไม่ต้องล็อกอิน
+  // มีแต่ผู้ดูแลระบบที่กดปุ่มมุมขวาบนเพื่อล็อกอินเข้ามาเป็นครั้งคราว
+  async openLogin() {
+    const { value: creds } = await Swal.fire({
+      title: "เข้าสู่ระบบผู้ดูแลระบบ",
+      html: `
+        <div class="field" style="text-align:left;"><label>อีเมล</label><input id="swalEmail" type="email" placeholder="name@example.com"/></div>
+        <div class="field" style="text-align:left;margin-bottom:0;"><label>รหัสผ่าน</label><input id="swalPassword" type="password" placeholder="••••••••"/></div>
+      `,
+      confirmButtonText: "เข้าสู่ระบบ",
+      confirmButtonColor: "#1c4c80",
+      showCancelButton: true,
+      cancelButtonText: "ยกเลิก",
+      focusConfirm: false,
+      preConfirm: () => {
+        const email = document.getElementById("swalEmail").value.trim();
+        const password = document.getElementById("swalPassword").value;
+        if (!email || !password) {
+          Swal.showValidationMessage("กรุณากรอกอีเมลและรหัสผ่าน");
+          return false;
+        }
+        return { email, password };
+      },
+    });
+    if (!creds) return;
+    const { error } = await sb.auth.signInWithPassword(creds);
+    if (error) return UI.toast("เข้าสู่ระบบไม่สำเร็จ: อีเมลหรือรหัสผ่านไม่ถูกต้อง", true);
+    await Auth.loadProfile();
+    UI.toast("เข้าสู่ระบบเรียบร้อยแล้ว");
   },
-  clearError() {
-    document.getElementById("authError").classList.remove("show");
-  },
-  async login() {
-    Auth.clearError();
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
-    if (!email || !password) return Auth.showError("กรุณากรอกอีเมลและรหัสผ่าน");
-    const btn = document.getElementById("authSubmitBtn");
-    btn.disabled = true;
-    const { error } = await sb.auth.signInWithPassword({ email, password });
-    btn.disabled = false;
-    if (error) return Auth.showError("เข้าสู่ระบบไม่สำเร็จ: อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-    await boot();
-  },
+
   async logout() {
     await sb.auth.signOut();
     AppState.user = null;
     AppState.profile = null;
-    document.getElementById("authScreen").style.display = "flex";
-    document.getElementById("app").style.display = "none";
+    UI.updateAuthUI();
+  },
+
+  // โหลดโปรไฟล์ของผู้ใช้ที่ล็อกอินอยู่ (ถ้ามี) แล้วอัปเดตหน้าจอ — เรียกตอนเปิดหน้าเว็บและตอนล็อกอินสำเร็จ
+  async loadProfile() {
+    const { data } = await sb.auth.getSession();
+    const session = data.session;
+    if (!session) {
+      AppState.user = null;
+      AppState.profile = null;
+      UI.updateAuthUI();
+      return;
+    }
+    AppState.user = session.user;
+    const { data: profile } = await sb.from("profiles").select("full_name,role").eq("id", session.user.id).single();
+    AppState.profile = profile || null;
+    UI.updateAuthUI();
   },
 };
 
@@ -155,7 +205,7 @@ const Dashboard = {
 
     const tbody = document.querySelector("#dashTripsTable tbody");
     if (!trips || trips.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-soft);">ยังไม่มีทริป — เริ่มที่เมนู "คำนวณค่าใช้จ่ายเดินทางไปราชการ" หรือ "...ไปฝึกอบรม"</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-soft);">ยังไม่มีทริป</td></tr>';
       return;
     }
     tbody.innerHTML = trips
@@ -173,31 +223,10 @@ const Dashboard = {
 };
 
 async function boot() {
-  const { data } = await sb.auth.getSession();
-  const session = data.session;
-  if (!session) {
-    document.getElementById("authScreen").style.display = "flex";
-    document.getElementById("app").style.display = "none";
-    return;
-  }
-  AppState.user = session.user;
-  const { data: profile } = await sb.from("profiles").select("full_name,role").eq("id", session.user.id).single();
-  AppState.profile = profile;
-
-  if (!profile) {
-    await sb.auth.signOut();
-    document.getElementById("authScreen").style.display = "flex";
-    document.getElementById("app").style.display = "none";
-    Auth.showError("ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาติดต่อผู้ดูแลระบบ");
-    return;
-  }
-
-  document.getElementById("whoAmI").textContent = `${profile.full_name} (${profile.role === "admin" ? "ผู้ดูแลระบบ" : "เจ้าหน้าที่"})`;
-
-  document.getElementById("authScreen").style.display = "none";
-  document.getElementById("app").style.display = "flex";
+  // หน้าเว็บใช้งานได้ทันทีโดยไม่ต้องล็อกอิน — แค่เช็คว่ามี session แอดมินค้างอยู่ไหม (เช่น รีเฟรชหน้า)
+  // แล้วอัปเดตปุ่ม/เมนูให้ตรงสถานะ ไม่ได้บล็อกการแสดงผลของหน้าแรกเลย
   UI.renderMenu();
-  UI.showView("dashboard");
+  await Auth.loadProfile();
 }
 
 document.addEventListener("DOMContentLoaded", boot);
