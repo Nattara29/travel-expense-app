@@ -10,9 +10,9 @@ const AppState = {
 
 // MENU: รายการที่ไม่ใส่ adminOnly = ผู้ใช้งานทั่วไปเห็นได้เลยโดยไม่ต้องล็อกอิน
 const MENU = [
+  { id: "dashboard", label: "แดชบอร์ด", adminOnly: true },
   { id: "gov-trip", label: "คำนวณค่าใช้จ่ายเดินทางไปราชการ" },
   { id: "training-trip", label: "คำนวณค่าใช้จ่ายเดินทางไปฝึกอบรม" },
-  { id: "dashboard", label: "แดชบอร์ด", adminOnly: true },
   { id: "rates", label: "จัดการอัตราค่าใช้จ่าย", adminOnly: true },
 ];
 
