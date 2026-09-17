@@ -1,6 +1,17 @@
 // เครื่องคำนวณค่าใช้จ่ายเดินทางไปราชการ: ค่าเบี้ยเลี้ยง / ค่าที่พัก / ค่าพาหนะ (รายบุคคล + หมู่คณะ)
 // ใช้งานได้โดยไม่ต้องล็อกอิน — อ่านอัตราจากตาราง position_levels/rate_settings ที่เปิดอ่านสาธารณะไว้
 
+// แสดง "ที่มาของผลคำนวณ" เป็นกล่องอธิบายขั้นตอน ต่อจากรายละเอียดผลลัพธ์
+function renderCalcExplain(breakdown, formula) {
+  return `
+    <div class="calc-explain">
+      <div class="calc-explain-title">ที่มาของผลคำนวณ</div>
+      <ol>${breakdown.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ol>
+      ${formula ? `<div class="calc-explain-formula">${escapeHtml(formula)}</div>` : ""}
+    </div>
+  `;
+}
+
 const RateEngine = {
   positionLevels: null,
   rates: null,
@@ -49,21 +60,45 @@ const RateEngine = {
   // พักแรม: ทุก 24 ชม. = 1 วัน เศษที่เกิน 12 ชม. นับเพิ่มอีก 1 วัน (เศษไม่เกิน 12 ชม. ปัดทิ้ง)
   // ไม่พักแรม: เกิน 12 ชม. (แต่ไม่ถึง 24) = 1 วัน, เกิน 6 ถึง 12 ชม. = ครึ่งวัน, ไม่เกิน 6 ชม. = ไม่มีสิทธิ
   calcAllowanceDays(departureAt, returnAt, isOvernight) {
+    return this.calcAllowanceDaysDetailed(departureAt, returnAt, isOvernight).days;
+  },
+
+  // เหมือน calcAllowanceDays แต่คืนขั้นตอนการคำนวณเป็นข้อความด้วย เพื่อแสดง "ที่มาของผลคำนวณ" ให้ผู้ใช้เห็น
+  calcAllowanceDaysDetailed(departureAt, returnAt, isOvernight) {
     const totalHours = (returnAt - departureAt) / 3600000;
-    if (totalHours <= 0) return 0;
-    if (isOvernight) {
+    const fmtH = (h) => h.toLocaleString("th-TH", { maximumFractionDigits: 1 }) + " ชั่วโมง";
+    if (totalHours <= 0) return { days: 0, breakdown: ["ช่วงเวลาเดินทางไม่ถูกต้อง"] };
+
+    const breakdown = [`ระยะเวลาเดินทางทั้งหมด ${fmtH(totalHours)} (${isOvernight ? "มีการพักแรม" : "ไม่มีการพักแรม"})`];
+    let days;
+
+    if (isOvernight || totalHours > 24) {
       const fullDays = Math.floor(totalHours / 24);
       const remainder = totalHours - fullDays * 24;
-      return fullDays + (remainder > 12 ? 1 : 0);
+      const extra = remainder > 12 ? 1 : !isOvernight && remainder > 6 ? 0.5 : 0;
+      days = fullDays + extra;
+      if (fullDays > 0) breakdown.push(`ครบ 24 ชั่วโมง จำนวน ${fullDays} รอบ = ${fullDays} วัน`);
+      if (remainder > 0) {
+        breakdown.push(
+          extra === 1
+            ? `เศษเวลา ${fmtH(remainder)} มากกว่า 12 ชั่วโมง → นับเพิ่มอีก 1 วัน`
+            : extra === 0.5
+              ? `เศษเวลา ${fmtH(remainder)} เกิน 6 ถึง 12 ชั่วโมง (ไม่พักแรม) → นับเพิ่มครึ่งวัน`
+              : `เศษเวลา ${fmtH(remainder)} ไม่เกิน 12 ชั่วโมง → ไม่นับเพิ่ม`
+        );
+      }
+    } else if (totalHours > 12) {
+      days = 1;
+      breakdown.push("ไม่พักแรม และเกิน 12 ชั่วโมง → นับเป็น 1 วันเต็ม");
+    } else if (totalHours > 6) {
+      days = 0.5;
+      breakdown.push("ไม่พักแรม เกิน 6 ถึง 12 ชั่วโมง → นับเป็นครึ่งวัน");
+    } else {
+      days = 0;
+      breakdown.push("ไม่พักแรม และไม่เกิน 6 ชั่วโมง → ไม่มีสิทธิได้รับเบี้ยเลี้ยง");
     }
-    if (totalHours > 24) {
-      const fullDays = Math.floor(totalHours / 24);
-      const remainder = totalHours - fullDays * 24;
-      return fullDays + (remainder > 12 ? 1 : remainder > 6 ? 0.5 : 0);
-    }
-    if (totalHours > 12) return 1;
-    if (totalHours > 6) return 0.5;
-    return 0;
+
+    return { days, breakdown };
   },
 };
 
@@ -100,7 +135,7 @@ const GovTrip = {
     if (isNaN(departure) || isNaN(ret)) return UI.toast("กรุณากรอกวันเวลาออกเดินทางและเดินทางกลับ", true);
     if (ret <= departure) return UI.toast("วันเวลาเดินทางกลับต้องอยู่หลังวันเวลาออกเดินทาง", true);
 
-    const days = RateEngine.calcAllowanceDays(departure, ret, overnight);
+    const { days, breakdown } = RateEngine.calcAllowanceDaysDetailed(departure, ret, overnight);
     const rate = RateEngine.findRate("daily_allowance", { positionLevelId: positionId });
     if (rate === null) return UI.toast("ไม่พบอัตราเบี้ยเลี้ยงสำหรับระดับตำแหน่งนี้", true);
     const total = days * rate;
@@ -112,6 +147,7 @@ const GovTrip = {
         <div class="result-row"><span>อัตราต่อวัน</span><span>${RateEngine.fmt(rate)} บาท</span></div>
       </div>
       <div class="result-total"><span>รวมค่าเบี้ยเลี้ยง</span><span class="amt">${RateEngine.fmt(total)} บาท</span></div>
+      ${renderCalcExplain(breakdown, `${days} วัน × ${RateEngine.fmt(rate)} บาท/วัน = ${RateEngine.fmt(total)} บาท`)}
     `;
   },
 
@@ -136,7 +172,7 @@ const GovTrip = {
     const overnight = document.getElementById("gagOvernight").checked;
     if (isNaN(departure) || isNaN(ret)) return UI.toast("กรุณากรอกวันเวลาออกเดินทางและเดินทางกลับ", true);
     if (ret <= departure) return UI.toast("วันเวลาเดินทางกลับต้องอยู่หลังวันเวลาออกเดินทาง", true);
-    const days = RateEngine.calcAllowanceDays(departure, ret, overnight);
+    const { days, breakdown } = RateEngine.calcAllowanceDaysDetailed(departure, ret, overnight);
 
     const rows = Array.from(document.querySelectorAll("#gagRows .gov-allowance-row"));
     if (rows.length === 0) return UI.toast("กรุณาเพิ่มรายชื่อผู้เดินทางอย่างน้อย 1 คน", true);
@@ -163,6 +199,7 @@ const GovTrip = {
           .join("")}
       </tbody></table></div>
       <div class="result-total" style="margin-top:12px;"><span>รวมค่าเบี้ยเลี้ยงทั้งคณะ (${lines.length} คน)</span><span class="amt">${RateEngine.fmt(grandTotal)} บาท</span></div>
+      ${renderCalcExplain(breakdown, `จำนวนวันที่คำนวณได้ (ใช้กำหนดการเดียวกันทั้งคณะ) = ${days} วัน`)}
     `;
   },
 
