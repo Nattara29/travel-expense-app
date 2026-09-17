@@ -1,11 +1,18 @@
 :root{
-  --blue-900:#0f2c4c;
-  --blue-800:#153a63;
-  --blue-700:#1c4c80;
-  --blue-600:#2563a8;
-  --blue-500:#2f8fd1;
-  --gold-400:#f0c419;
-  --bg:#f2f5f8;
+  /* ธีมสีพาสเทล — ไล่เฉดเข้มจากสีฟ้า #789CCE ในพาเลตที่เลือก (ใช้กับ sidebar/ปุ่ม/ข้อความเข้ม
+     เพราะสีพาสเทลอ่อนเกินกว่าจะใช้เป็นพื้นหลังเข้มพร้อมตัวอักษรขาวได้ อ่านยาก) */
+  --blue-900:#1e3350;
+  --blue-800:#2a4368;
+  --blue-700:#35528a;
+  --blue-600:#4a6fa8;
+  --blue-500:#789cce;
+  /* สีพาสเทลอ่อนจากพาเลต ใช้เป็นพื้นหลังการ์ด/จุดเน้นสี (พื้นอ่อน + ตัวอักษรเข้มด้านบน) */
+  --pink-300:#ffd6da;
+  --pink-400:#ffc6d0;
+  --mint-300:#e1f7e7;
+  --sky-300:#d1eaf5;
+  --periwinkle-300:#c3d6f2;
+  --bg:#f7f8fb;
   --panel:#ffffff;
   --line:#e2e8ee;
   --text:#1c2733;
@@ -16,10 +23,11 @@
   --amber-bg:#fbf2dc;
   --radius:12px;
 
-  --grad-1:linear-gradient(135deg,#4facfe,#0468b5);
-  --grad-2:linear-gradient(135deg,#a78bfa,#6d28d9);
-  --grad-3:linear-gradient(135deg,#ff9a56,#e8590c);
-  --grad-4:linear-gradient(135deg,#ffd166,#e8a317);
+  /* การ์ดสรุปตัวเลขในแดชบอร์ด: พื้นพาสเทลเรียบ (ไม่ไล่เฉด) + ตัวอักษรกรมท่าเข้ม */
+  --grad-1:var(--pink-300);
+  --grad-2:var(--mint-300);
+  --grad-3:var(--sky-300);
+  --grad-4:var(--periwinkle-300);
 }
 *{box-sizing:border-box;}
 body{margin:0;font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);}
@@ -35,7 +43,7 @@ h1,h2,h3,.display{font-family:'Kanit',sans-serif;}
 .brand{padding:22px 20px 18px 20px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;gap:12px;align-items:center;}
 .brand-seal{
   width:44px;height:44px;border-radius:50%;flex-shrink:0;
-  background:radial-gradient(circle at 35% 30%, #ffe27a, var(--gold-400) 65%);
+  background:radial-gradient(circle at 35% 30%, #fff0f3, var(--pink-400) 65%);
   display:flex;align-items:center;justify-content:center;color:var(--blue-900);
   font-family:'Kanit';font-weight:700;font-size:14px;border:2px solid rgba(255,255,255,.25);
 }
@@ -46,7 +54,7 @@ nav.menu{padding:14px 10px;flex:1;overflow-y:auto;scrollbar-width:none;}
 nav.menu::-webkit-scrollbar{width:0;height:0;}
 .menu-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;color:#d7e6f2;cursor:pointer;font-size:14.5px;margin-bottom:3px;border:1px solid transparent;}
 .menu-item:hover{background:rgba(255,255,255,.08);color:#fff;}
-.menu-item.active{background:rgba(240,196,25,.18);color:#fff;border-color:rgba(240,196,25,.4);}
+.menu-item.active{background:rgba(255,198,208,.22);color:#fff;border-color:rgba(255,198,208,.45);}
 .menu-label{flex:1;}
 
 /* เมนูย่อยแบบกาง/หุบ (accordion) */
@@ -55,7 +63,7 @@ nav.menu::-webkit-scrollbar{width:0;height:0;}
 .submenu{max-height:0;overflow:hidden;transition:max-height .25s ease;}
 .submenu.open{max-height:400px;}
 .menu-item.sub{padding-left:30px;font-size:13.5px;color:#bcd7ee;}
-.menu-item.sub.active{background:rgba(240,196,25,.18);color:#fff;}
+.menu-item.sub.active{background:rgba(255,198,208,.22);color:#fff;}
 .sidebar-foot{padding:14px 20px;border-top:1px solid rgba(255,255,255,.12);font-size:11.5px;color:#a9c7e0;}
 .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(15,44,76,.45);z-index:35;}
 .sidebar-backdrop.active{display:block;}
@@ -84,11 +92,12 @@ nav.menu::-webkit-scrollbar{width:0;height:0;}
 @media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}}
 @media(max-width:640px){.grid-4{grid-template-columns:1fr 1fr;}.grid-3{grid-template-columns:1fr;}}
 
-.stat-card{padding:18px;border-radius:16px;color:#fff;position:relative;overflow:hidden;min-height:104px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;transition:transform .15s ease,box-shadow .15s ease;}
-.stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(15,44,76,.18);}
-.stat-card::after{content:"";position:absolute;right:-18px;top:-18px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.14);}
+/* พื้นการ์ดเป็นสีพาสเทลอ่อน จึงใช้ตัวอักษร/ไอคอนสีกรมท่าเข้มแทนสีขาว (อ่านง่ายกว่าบนพื้นอ่อน) */
+.stat-card{padding:18px;border-radius:16px;color:var(--blue-900);position:relative;overflow:hidden;min-height:104px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;transition:transform .15s ease,box-shadow .15s ease;border:1px solid rgba(30,51,80,.06);}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(15,44,76,.14);}
+.stat-card::after{content:"";position:absolute;right:-18px;top:-18px;width:90px;height:90px;border-radius:50%;background:rgba(30,51,80,.06);}
 .stat-num{font-family:'Kanit';font-size:28px;font-weight:600;line-height:1.15;}
-.stat-label{font-size:12.6px;opacity:.92;}
+.stat-label{font-size:12.6px;opacity:.75;}
 .stat-icon{position:absolute;right:16px;top:16px;width:28px;height:28px;opacity:.9;}
 .stat-icon svg{width:100%;height:100%;display:block;}
 
@@ -117,7 +126,7 @@ nav.menu::-webkit-scrollbar{width:0;height:0;}
 .btn{font-family:'Sarabun';font-weight:600;font-size:13.8px;border-radius:8px;padding:9px 16px;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
 .btn-primary{background:var(--blue-700);color:#fff;}
 .btn-primary:hover{background:var(--blue-600);}
-.btn-gold{background:var(--gold-400);color:var(--blue-900);}
+.btn-gold{background:var(--pink-400);color:var(--blue-900);}
 .btn-gold:hover{filter:brightness(1.05);}
 .btn-ghost{background:transparent;color:var(--text);border-color:var(--line);}
 .btn-ghost:hover{background:var(--bg);}
@@ -146,7 +155,7 @@ tr:hover td{background:#f7fafc;}
 /* ---------- Auth screen ---------- */
 #authScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--blue-900),var(--blue-700));padding:20px;}
 .auth-card{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.auth-seal{width:60px;height:60px;border-radius:50%;margin:0 auto 14px auto;background:radial-gradient(circle at 35% 30%,#ffe27a,var(--gold-400) 65%);display:flex;align-items:center;justify-content:center;font-family:'Kanit';font-weight:700;color:var(--blue-900);}
+.auth-seal{width:60px;height:60px;border-radius:50%;margin:0 auto 14px auto;background:radial-gradient(circle at 35% 30%,#fff0f3,var(--pink-400) 65%);display:flex;align-items:center;justify-content:center;font-family:'Kanit';font-weight:700;color:var(--blue-900);}
 .auth-title{text-align:center;font-family:'Kanit';font-weight:600;font-size:19px;margin:0 0 4px 0;}
 .auth-sub{text-align:center;font-size:12.8px;color:var(--text-soft);margin:0 0 22px 0;}
 .auth-error{background:var(--red-bg);color:var(--red);border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:12px;display:none;}
