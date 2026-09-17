@@ -18,6 +18,11 @@ const RateEngine = {
 
   async ensureLoaded() {
     if (this.positionLevels && this.rates) return;
+    await this.reload();
+  },
+
+  // โหลดข้อมูลอัตรา/ระดับตำแหน่งใหม่จากฐานข้อมูลเสมอ (ใช้หลังแอดมินเพิ่มอัตราใหม่ในเมนูจัดการอัตรา)
+  async reload() {
     const [{ data: levels }, { data: rateRows }] = await Promise.all([
       sb.from("position_levels").select("id,name,sort_order").order("sort_order"),
       sb.from("rate_settings").select("rate_type,position_level_id,room_type,transport_type,value,effective_date").order("effective_date", { ascending: false }),
@@ -26,18 +31,24 @@ const RateEngine = {
     this.rates = rateRows || [];
   },
 
-  // หาอัตราล่าสุดที่ effective_date ไม่เกินวันนี้ ตรงเงื่อนไขที่กำหนด (ถ้าปรับอัตราใหม่ในอนาคต จะเลือกอัตราที่ใช้อยู่จริง ณ วันนี้เสมอ)
-  findRate(rateType, { positionLevelId = null, roomType = null, transportType = null } = {}) {
+  // หาแถวอัตราล่าสุดที่ effective_date ไม่เกินวันนี้ ตรงเงื่อนไขที่กำหนด (ถ้าปรับอัตราใหม่ในอนาคต จะเลือกอัตราที่ใช้อยู่จริง ณ วันนี้เสมอ)
+  findRateRow(rateType, { positionLevelId = null, roomType = null, transportType = null } = {}) {
     const today = new Date().toISOString().slice(0, 10);
-    const match = this.rates.find(
-      (r) =>
-        r.rate_type === rateType &&
-        r.effective_date <= today &&
-        (positionLevelId === null || r.position_level_id === positionLevelId) &&
-        (roomType === null || r.room_type === roomType) &&
-        (transportType === null || r.transport_type === transportType)
+    return (
+      this.rates.find(
+        (r) =>
+          r.rate_type === rateType &&
+          r.effective_date <= today &&
+          (positionLevelId === null || r.position_level_id === positionLevelId) &&
+          (roomType === null || r.room_type === roomType) &&
+          (transportType === null || r.transport_type === transportType)
+      ) || null
     );
-    return match ? Number(match.value) : null;
+  },
+
+  findRate(rateType, opts) {
+    const row = this.findRateRow(rateType, opts);
+    return row ? Number(row.value) : null;
   },
 
   positionName(id) {

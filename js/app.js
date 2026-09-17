@@ -45,6 +45,7 @@ const UI = {
     UI.closeSidebar();
     if (id === "dashboard") Dashboard.load();
     if (id.startsWith("gov-")) GovTrip.onShowView(id);
+    if (id === "rates") RatesAdmin.load();
   },
   // หาเมนู (รวมเมนูย่อยที่ซ้อนอยู่ใน children) จาก id — ใช้ตั้งชื่อหัวข้อบนสุดของหน้า
   findMenuItem(id) {
