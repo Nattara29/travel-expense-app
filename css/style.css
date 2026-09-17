@@ -151,6 +151,7 @@ table{width:100%;border-collapse:collapse;font-size:13.6px;}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;}
 th{background:var(--bg);font-weight:600;color:var(--text-soft);font-size:12.4px;text-transform:uppercase;letter-spacing:.02em;}
 tr:hover td{background:#f7fafc;}
+td.wrap-cell{white-space:normal;min-width:260px;max-width:480px;color:var(--text-soft);}
 
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;}
 .badge-green{background:#2aab6b;color:#fff;}
